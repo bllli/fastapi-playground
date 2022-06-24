@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from starlette.responses import JSONResponse
 
-from webapp.controllers import main_router
+from webapp import main_router
 
 
 def create_app():
