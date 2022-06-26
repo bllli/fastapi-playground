@@ -1,3 +1,4 @@
+import abc
 import asyncio
 import dataclasses
 import hashlib
@@ -9,21 +10,6 @@ from typing import Any, Dict, Tuple, List
 import aiohttp as aiohttp
 
 logger = logging.getLogger(__name__)
-
-
-class OneTrueConfig:
-
-    def __init__(self):
-        self._config = {}
-
-    def get(self, key: str) -> Any:
-        return self._config.get(key)
-
-    def __getitem__(self, key: str) -> Any:
-        return self.get(key)
-
-    def update_all(self, config: dict):
-        self._config.update(config)
 
 
 class NacosRequestor:
@@ -161,9 +147,49 @@ class NacosConfigManager:
             updated_keys = await self._listen_config()
             for key in updated_keys:
                 new_config_content = await self._get_config(key)
+                if key not in self.keys:
+                    logger.debug(f'NacosConfigManager[{id(self)}] got new key: {key}. ignored')
+                    continue
                 self.keys[key].update(new_config_content)
                 print(f'updated {key} {self.keys[key].current_version_md5}')
                 # await callback(updated_keys)
+
+
+class ZoeConfig(abc.ABC):
+
+    @abc.abstractmethod
+    def get(self, key: str) -> Any:
+        raise NotImplementedError()
+
+    def __getitem__(self, key: str) -> Any:
+        return self.get(key)
+
+    async def start_listen(self):
+        pass
+
+
+class ZoeConfigNacosImpl(ZoeConfig):
+
+    def get(self, key: str) -> Any:
+        pass
+
+    async def start_listen(self):
+        pass
+
+
+def get_nacos_config_from_env():
+    nacos_config = NacosConfig(
+        address=os.environ['NACOS_ADDRESS'],
+        username=os.environ['NACOS_USERNAME'],
+        password=os.environ['NACOS_PASSWORD'],
+    )
+
+    nacos_key = NacosKey(
+        namespace=os.environ['NACOS_NAMESPACE'],
+        group=os.environ['NACOS_GROUP'],
+        data_id=os.environ['NACOS_DATA_ID'],
+    )
+    return nacos_config, [nacos_key]
 
 
 if __name__ == '__main__':
